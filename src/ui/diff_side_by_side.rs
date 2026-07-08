@@ -16,6 +16,7 @@ use crate::ui::comment_panel;
 use crate::ui::diff_view::{
     apply_horizontal_scroll, comment_type_presentation, cursor_indicator, cursor_indicator_spaced,
     diff_stat_title, hunk_header_text_and_style, is_line_highlighted,
+    paint_unified_diff_rows_with,
     paint_visual_selection_overlay, populate_row_to_annotation, render_expander_line,
     render_hidden_lines, scroll_comment_input_into_view,
 };
@@ -795,20 +796,15 @@ pub(super) fn render_side_by_side_diff(frame: &mut Frame, app: &mut App, area: R
     frame.render_widget(diff, inner);
 
     if app.cursor_line_highlight {
-        let viewport_height = inner.height as usize;
-        for offset in 0..viewport_height {
-            if is_line_highlighted(app, offset) {
-                let row_rect = Rect {
-                    x: inner.x,
-                    y: inner.y + offset as u16,
-                    width: inner.width,
-                    height: 1,
-                };
-                frame
-                    .buffer_mut()
-                    .set_style(row_rect, Style::default().bg(app.theme.cursor_line_bg));
-            }
-        }
+        paint_unified_diff_rows_with(
+            frame,
+            inner,
+            &visible_lines_unscrolled_for_overlay,
+            &row_heights,
+            |idx, _line| {
+                is_line_highlighted(app, idx).then(|| Style::default().bg(app.theme.cursor_line_bg))
+            },
+        );
     }
 
     // Painted last so the cell overlay wins over cursor-line bg on overlap.
